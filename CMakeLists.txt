@@ -1,15 +1,5 @@
-cmake_minimum_required(VERSION 2.6)
-
-project(cudaSift)
-set(cudaSift_VERSION_MAJOR 2)
-set(cudaSift_VERSION_MINOR 0)
-set(cudaSift_VERSION_PATCH 0)
-
-set(CPACK_PACKAGE_VERSION_MAJOR "${cudaSift_VERSION_MAJOR}")
-set(CPACK_PACKAGE_VERSION_MINOR "${cudaSift_VERSION_MINOR}")
-set(CPACK_PACKAGE_VERSION_PATCH "${cudaSift_VERSION_PATCH}")
-set(CPACK_GENERATOR "ZIP")
-include(CPack)
+cmake_minimum_required(VERSION 2.8.3)
+project(cudasift_ros)
 
 find_package(OpenCV REQUIRED)
 find_package(CUDA)
@@ -31,38 +21,38 @@ if (UNIX)
   endif()
 endif()
 
-set(cuda_sources
-  # dynamic.cu
-  cudaImage.cu  
-  cudaImage.h  
-  cudaSiftH.cu 
-  cudaSiftH.h  
-  matching.cu  
-  cudaSiftD.h  
-  cudaSift.h  
-  cudautils.h
-)  
-
-set(sources
-  geomFuncs.cpp  
-  mainSift.cpp
+find_package(catkin REQUIRED COMPONENTS
+  cv_bridge
+  image_transport
+  roscpp
 )
 
+catkin_package(
+  INCLUDE_DIRS include
+  LIBRARIES cudasift_ros
+  CATKIN_DEPENDS cv_bridge image_transport roscpp
+  DEPENDS eigen opencv
+)
+
+set(cuda_sources
+  # dynamic.cu
+  src/cudaImage.cu  
+  src/cudaImage.h  
+  src/cudaSiftH.cu 
+  src/cudaSiftH.h  
+  src/matching.cu  
+  src/cudaSiftD.h  
+  src/cudaSift.h  
+  src/cudautils.h
+)  
+
 include_directories(
+  ${catkin_INCLUDE_DIRS}
   ${CMAKE_CURRENT_SOURCE_DIR} 
 )
 
 SET(CUDA_SEPARABLE_COMPILATION ON)
 
-cuda_add_executable(cudasift ${cuda_sources} ${sources} OPTIONS -arch=sm_35)
-
-set_target_properties(cudasift PROPERTIES
-  COMPILE_FLAGS "${EXTRA_CXX_FLAGS}"			   
-)
-
-target_link_libraries(cudasift
-  /usr/local/cuda/lib64/libcudadevrt.a ${OpenCV_LIBS} 
-)
  
 install(FILES 
   ${cuda_sources} 
@@ -72,6 +62,9 @@ install(FILES
   Copyright.txt
   DESTINATION .
 )
-install(FILES data/left.pgm data/righ.pgm
-  DESTINATION data
+
+cuda_add_executable(cudasift_ros_node src/cudaSift_ros.cpp ${cuda_sources} OPTIONS -arch=sm_35)
+target_link_libraries(cudasift_ros_node
+  ${catkin_LIBRARIES} ${OpenCV_LIBS} /usr/local/cuda/lib64/libcudadevrt.a
 )
+
